@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Bank Details - EMIS</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- SheetJS library for Excel file reading -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f0f5; }
+    
+    .top-gradient-bar {
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      height: 8px;
+      width: 100%;
+    }
+    
+    .breadcrumb { 
+      padding: 15px 25px;
+      font-size: 14px; 
+      color: #666;
+      background-color: #f0f0f5;
+    }
+    
+    .breadcrumb-separator { margin: 0 8px; color: #999; }
+    .breadcrumb-active { color: #333; font-weight: 500; }
+    
+    .container { min-height: 100vh; }
+    
+    .content-card { 
+      background: white; 
+      margin: 0 20px 20px 20px;
+      border-radius: 8px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+      overflow: hidden;
+    }
+    
+    .filter-section { 
+      padding: 20px 25px; 
+      border-bottom: 1px solid #e0e0e0;
+      background-color: white;
+    }
+    
+    .filter-row { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      gap: 15px; 
+      flex-wrap: wrap;
+    }
+    
+    .filter-controls { 
+      display: flex; 
+      gap: 12px; 
+      align-items: center; 
+      flex-wrap: wrap;
+    }
+    
+    .filter-group { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 5px; 
+      min-width: 140px;
+    }
+    
+    .filter-label { 
+      font-size: 12px; 
+      font-weight: 500; 
+      color: #555;
+    }
+    
+    .filter-dropdown { 
+      padding: 8px 12px; 
+      border: 1px solid #ccc; 
+      border-radius: 4px; 
+      font-size: 13px;
+      background-color: white;
+      outline: none;
+      cursor: pointer;
+    }
+    
+    .filter-dropdown:focus {
+      border-color: #22d3ee;
+    }
+    
+    .excel-btn { 
+      padding: 8px 18px; 
+      background-color: #10b981; 
+      color: white; 
+      border: none; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 18px;
+      transition: background-color 0.2s;
+    }
+    
+    .excel-btn:hover {
+      background-color: #059669;
+    }
+    
+    .upload-btn {
+      padding: 8px 18px; 
+      background-color: #3b82f6; 
+      color: white; 
+      border: none; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 18px;
+      transition: background-color 0.2s;
+      position: relative;
+    }
+    
+    .upload-btn:hover {
+      background-color: #2563eb;
+    }
+    
+    .upload-btn input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    
+    .na-info-btn {
+      padding: 6px 16px;
+      background-color: #06b6d4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      margin-top: 18px;
+      cursor: default;
+    }
+    
+    .search-group { 
+      flex: 0 0 auto;
+      min-width: 250px;
+    }
+    
+    .search-input { 
+      width: 100%; 
+      padding: 8px 12px; 
+      border: 1px solid #ccc; 
+      border-radius: 4px; 
+      font-size: 13px;
+      outline: none;
+    }
+    
+    .search-input:focus {
+      border-color: #22d3ee;
+    }
+    
+    .table-container { 
+      overflow-x: auto;
+      background-color: white;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 13px;
+    }
+    
+    th { 
+      padding: 14px 16px; 
+      text-align: left; 
+      font-weight: 600; 
+      background-color: #22d3ee; 
+      color: white;
+      font-size: 13px;
+      white-space: nowrap;
+      user-select: none;
+      position: relative;
+    }
+    
+    th.sortable {
+      cursor: pointer;
+    }
+    
+    th.sortable:hover {
+      background-color: #06b6d4;
+    }
+    
+    th.center { text-align: center; }
+    
+    th.postal-header {
+      background-color: #86efac;
+      text-align: center;
+      min-width: 180px;
+      cursor: default;
+    }
+    
+    th.postal-header:hover {
+      background-color: #86efac;
+    }
+    
+    .sort-indicator {
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 10px;
+      opacity: 0.8;
+    }
+    
+    td { 
+      padding: 14px 16px; 
+      border-bottom: 1px solid #e5e7eb;
+      color: #374151;
+    }
+    
+    td.center { text-align: center; }
+    
+    tbody tr:hover {
+      background-color: #f9fafb;
+    }
+    
+    .status-yes { 
+      padding: 5px 16px; 
+      border-radius: 14px; 
+      font-size: 12px; 
+      background-color: #d1fae5; 
+      color: #065f46; 
+      font-weight: 500;
+      display: inline-block;
+    }
+    
+    .status-no { 
+      padding: 5px 16px; 
+      border-radius: 14px; 
+      font-size: 12px; 
+      background-color: #fee2e2; 
+      color: #991b1b; 
+      font-weight: 500;
+      display: inline-block;
+    }
+    
+    .status-na { 
+      padding: 5px 20px; 
+      border-radius: 14px; 
+      font-size: 12px; 
+      background-color: #86efac; 
+      color: white; 
+      font-weight: 600;
+      display: inline-block;
+    }
+    
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 25px;
+      border-top: 1px solid #e5e7eb;
+      background-color: white;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .pagination { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 8px;
+    }
+    
+    .per-page-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #374151;
+    }
+    
+    .per-page-dropdown {
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 13px;
+      background-color: white;
+      cursor: pointer;
+      outline: none;
+    }
+    
+    .per-page-dropdown:focus {
+      border-color: #22d3ee;
+    }
+    
+    .page-btn { 
+      padding: 6px 10px; 
+      border: 1px solid #d1d5db; 
+      background: white; 
+      border-radius: 4px; 
+      cursor: pointer;
+      font-size: 13px;
+      color: #6b7280;
+      min-width: 32px;
+      transition: background-color 0.2s;
+    }
+    
+    .page-btn:hover:not(:disabled) {
+      background-color: #f3f4f6;
+    }
+    
+    .page-btn:disabled {
+      border-color: #e5e7eb;
+      background-color: #f9fafb;
+      cursor: not-allowed;
+      color: #d1d5db;
+    }
+    
+    .page-text {
+      font-size: 13px;
+      color: #374151;
+      padding: 0 10px;
+    }
+    
+    .no-records {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+    
+    .info-message {
+      background-color: #dbeafe;
+      color: #1e40af;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 13px;
+      border-left: 4px solid #3b82f6;
+    }
+    
+    .showing-info {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+      .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filter-controls {
+        width: 100%;
+      }
+      
+      .search-group {
+        width: 100%;
+        min-width: 100%;
+      }
+      
+      .content-card {
+        margin: 0 10px 10px 10px;
+      }
+      
+      .pagination-container {
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .pagination {
+        order: 3;
+      }
+      
+      .per-page-selector {
+        order: 1;
+      }
+      
+      .showing-info {
+        order: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const StudentBankDetails = () => {
+      const [students, setStudents] = useState([]);
+      const [filteredStudents, setFilteredStudents] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [selectedClass, setSelectedClass] = useState('');
+      const [selectedSection, setSelectedSection] = useState('');
+      const [searchKeyword, setSearchKeyword] = useState('');
+      const [sortColumn, setSortColumn] = useState('');
+      const [sortDirection, setSortDirection] = useState('asc');
+      const [currentPage, setCurrentPage] = useState(1);
+      const [itemsPerPage, setItemsPerPage] = useState(10);
+      const [dataSource, setDataSource] = useState('sample');
+
+      // Load sample data on initial mount
+      useEffect(() => {
+        loadSampleData();
+      }, []);
+
+      const loadSampleData = () => {
+        const mockData = [
+          { id: 1, studentName: 'Rahul Kumar', studentEmisId: 'EMIS001234', class: '10', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
+          { id: 2, studentName: 'Priya Sharma', studentEmisId: 'EMIS001235', class: '10', section: 'B', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
+          { id: 3, studentName: 'Amit Singh', studentEmisId: 'EMIS001236', class: '11', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
+          { id: 4, studentName: 'Sneha Patel', studentEmisId: 'EMIS001237', class: '11', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
+          { id: 5, studentName: 'Vikram Reddy', studentEmisId: 'EMIS001238', class: '12', section: 'A', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
+          { id: 6, studentName: 'Anita Desai', studentEmisId: 'EMIS001239', class: '12', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
+          { id: 7, studentName: 'Rohan Gupta', studentEmisId: 'EMIS001240', class: '9', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
+          { id: 8, studentName: 'Kavya Nair', studentEmisId: 'EMIS001241', class: '9', section: 'B', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
+          { id: 9, studentName: 'Arjun Verma', studentEmisId: 'EMIS001242', class: '10', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
+          { id: 10, studentName: 'Divya Iyer', studentEmisId: 'EMIS001243', class: '10', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
+          { id: 11, studentName: 'Karan Mehta', studentEmisId: 'EMIS001244', class: '11', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
+          { id: 12, studentName: 'Neha Kapoor', studentEmisId: 'EMIS001245', class: '11', section: 'B', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
+          { id: 13, studentName: 'Sanjay Kumar', studentEmisId: 'EMIS001246', class: '12', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
+          { id: 14, studentName: 'Pooja Singh', studentEmisId: 'EMIS001247', class: '12', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
+          { id: 15, studentName: 'Ravi Sharma', studentEmisId: 'EMIS001248', class: '9', section: 'A', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
+        ];
+        setStudents(mockData);
+        setFilteredStudents(mockData);
+        setDataSource('sample');
+      };
+
+      // Handle Excel file upload
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setLoading(true);
+        const reader = new FileReader();
+
+        reader.onload = (evt) => {
+          try {
+            const bstr = evt.target.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const data = XLSX.utils.sheet_to_json(ws);
+
+            // Transform Excel data to match our format
+            const transformedData = data.map((row, index) => ({
+              id: index + 1,
+              studentName: row['Student Name'] || row['studentName'] || '',
+              studentEmisId: row['EMIS ID'] || row['studentEmisId'] || row['Student EMIS ID'] || '',
+              class: String(row['Class'] || row['class'] || ''),
+              section: String(row['Section'] || row['section'] || ''),
+              bankAccountAvailable: row['Bank Account Available'] || row['bankAccountAvailable'] || row['Bank Account'] || 'No',
+              postalBankAccount: row['Postal Bank Account'] || row['postalBankAccount'] || row['Postal Bank'] || 'NA',
+            }));
+
+            setStudents(transformedData);
+            setFilteredStudents(transformedData);
+            setDataSource('excel');
+            setLoading(false);
+            alert(`Successfully loaded ${transformedData.length} records from Excel file!`);
+          } catch (error) {
+            console.error('Error reading Excel file:', error);
+            alert('Error reading Excel file. Please check the format.');
+            setLoading(false);
+          }
+        };
+
+        reader.readAsBinaryString(file);
+        e.target.value = '';
+      };
+
+      const classes = useMemo(() => {
+        const uniqueClasses = [...new Set(students.map(s => s.class))];
+        return uniqueClasses.sort((a, b) => parseInt(a) - parseInt(b));
+      }, [students]);
+
+      const sections = useMemo(() => {
+        const uniqueSections = [...new Set(students.map(s => s.section))];
+        return uniqueSections.sort();
+      }, [students]);
+
+      useEffect(() => {
+        let filtered = [...students];
+        if (selectedClass) filtered = filtered.filter(s => s.class === selectedClass);
+        if (selectedSection) filtered = filtered.filter(s => s.section === selectedSection);
+        if (searchKeyword) {
+          const keyword = searchKeyword.toLowerCase();
+          filtered = filtered.filter(s => 
+            s.studentName.toLowerCase().includes(keyword) ||
+            s.studentEmisId.toLowerCase().includes(keyword) ||
+            s.class.includes(keyword) ||
+            s.section.toLowerCase().includes(keyword)
+          );
+        }
+        setFilteredStudents(filtered);
+        setCurrentPage(1);
+      }, [students, selectedClass, selectedSection, searchKeyword]);
+
+      const handleSort = (column) => {
+        const sortableColumns = ['studentName', 'studentEmisId', 'class', 'section'];
+        if (!sortableColumns.includes(column)) return;
+        
+        let direction = 'asc';
+        if (sortColumn === column && sortDirection === 'asc') {
+          direction = 'desc';
+        }
+        
+        const sorted = [...filteredStudents].sort((a, b) => {
+          let aValue = a[column];
+          let bValue = b[column];
+          
+          if (column === 'class') {
+            aValue = parseInt(aValue) || 0;
+            bValue = parseInt(bValue) || 0;
+          } else {
+            aValue = String(aValue).toLowerCase();
+            bValue = String(bValue).toLowerCase();
+          }
+          
+          if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+          return 0;
+        });
+        
+        setFilteredStudents(sorted);
+        setSortColumn(column);
+        setSortDirection(direction);
+      };
+
+      const getSortIndicator = (column) => {
+        if (sortColumn !== column) return ' ↕';
+        return sortDirection === 'asc' ? ' ▲' : ' ▼';
+      };
+
+      const indexOfLastItem = currentPage * itemsPerPage;
+      const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+      const currentItems = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+      const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+
+      const handleExcelDownload = () => {
+        const headers = ['S.No', 'EMIS ID', 'Student Name', 'Class', 'Section', 'Bank Account Availability(Yes/No)', 'Whether it is a Postal Bank Account (Yes/No)'];
+        const csvContent = [
+          headers.join(','),
+          ...filteredStudents.map((student, index) => [
+            index + 1, 
+            student.studentEmisId, 
+            `"${student.studentName}"`, 
+            student.class, 
+            student.section, 
+            student.bankAccountAvailable, 
+            student.postalBankAccount
+          ].join(','))
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Student_Bank_Details_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+      };
+
+      const getStatusClass = (status) => {
+        if (status === 'Yes') return 'status-yes';
+        if (status === 'No') return 'status-no';
+        return 'status-na';
+      };
+
+      const handleItemsPerPageChange = (e) => {
+        setItemsPerPage(Number(e.target.value));
+        setCurrentPage(1);
+      };
+
+      return (
+        <div className="container">
+          <div className="top-gradient-bar"></div>
+          
+          <div className="breadcrumb">
+            <span>Students</span>
+            <span className="breadcrumb-separator">›</span>
+            <span className="breadcrumb-active">Student Bank Details</span>
+          </div>
+
+          <div className="content-card">
+            {dataSource === 'sample' && (
+              <div style={{padding: '20px 25px', borderBottom: '1px solid #e0e0e0'}}>
+                <div className="info-message">
+                  📊 Currently showing sample data. Upload your Excel file to load real student data.
+                </div>
+              </div>
+            )}
+            
+            <div className="filter-section">
+              <div className="filter-row">
+                <div className="filter-controls">
+                  <div className="filter-group">
+                    <label className="filter-label">Class</label>
+                    <select 
+                      className="filter-dropdown" 
+                      value={selectedClass} 
+                      onChange={(e) => setSelectedClass(e.target.value)}
+                    >
+                      <option value="">All Classes</option>
+                      {classes.map(cls => <option key={cls} value={cls}>Class {cls}</option>)}
+                    </select>
+                  </div>
+                  
+                  <div className="filter-group">
+                    <label className="filter-label">Section</label>
+                    <select 
+                      className="filter-dropdown" 
+                      value={selectedSection} 
+                      onChange={(e) => setSelectedSection(e.target.value)}
+                    >
+                      <option value="">All Sections</option>
+                      {sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+                    </select>
+                  </div>
+                  
+                  <button className="upload-btn">
+                    📁 Upload Excel
+                    <input 
+                      type="file" 
+                      accept=".xlsx,.xls,.csv" 
+                      onChange={handleFileUpload}
+                    />
+                  </button>
+                  
+                  <button className="excel-btn" onClick={handleExcelDownload}>
+                    ↓ Excel Download
+                  </button>
+                  
+                  <button className="na-info-btn">
+                    NA = Not Applicable (No bank account for this student)
+                  </button>
+                </div>
+                
+                <div className="search-group">
+                  <input 
+                    className="search-input" 
+                    placeholder="Search by name, EMIS ID..." 
+                    value={searchKeyword} 
+                    onChange={(e) => setSearchKeyword(e.target.value)} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th className="center">S.No</th>
+                    <th className="sortable" onClick={() => handleSort('studentEmisId')}>
+                      EMIS ID<span className="sort-indicator">{getSortIndicator('studentEmisId')}</span>
+                    </th>
+                    <th className="sortable" onClick={() => handleSort('studentName')}>
+                      Student Name<span className="sort-indicator">{getSortIndicator('studentName')}</span>
+                    </th>
+                    <th className="center sortable" onClick={() => handleSort('class')}>
+                      Class<span className="sort-indicator">{getSortIndicator('class')}</span>
+                    </th>
+                    <th className="center sortable" onClick={() => handleSort('section')}>
+                      Section<span className="sort-indicator">{getSortIndicator('section')}</span>
+                    </th>
+                    <th className="center">Bank account Availablity(Yes/No)</th>
+                    <th className="postal-header">Whether it is a Postal Bank Account (Yes/No)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan="7" className="no-records">
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : currentItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="no-records">
+                        No Records Found
+                      </td>
+                    </tr>
+                  ) : (
+                    currentItems.map((student, index) => (
+                      <tr key={student.id}>
+                        <td className="center">{indexOfFirstItem + index + 1}</td>
+                        <td>{student.studentEmisId}</td>
+                        <td>{student.studentName}</td>
+                        <td className="center">{student.class}</td>
+                        <td className="center">{student.section}</td>
+                        <td className="center">
+                          <span className={getStatusClass(student.bankAccountAvailable)}>
+                            {student.bankAccountAvailable}
+                          </span>
+                        </td>
+                        <td className="center">
+                          <span className={getStatusClass(student.postalBankAccount)}>
+                            {student.postalBankAccount}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredStudents.length > 0 && (
+              <div className="pagination-container">
+                <div className="per-page-selector">
+                  <span>Show</span>
+                  <select 
+                    className="per-page-dropdown" 
+                    value={itemsPerPage} 
+                    onChange={handleItemsPerPageChange}
+                  >
+                    <option value="10">10</option>
+                    <option value="30">30</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                  <span>entries</span>
+                </div>
+                
+                <div className="showing-info">
+                  Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredStudents.length)} of {filteredStudents.length} entries
+                </div>
+                
+                <div className="pagination">
+                  <button 
+                    className="page-btn" 
+                    onClick={() => setCurrentPage(1)} 
+                    disabled={currentPage === 1}
+                  >
+                    ‹‹
+                  </button>
+                  <button 
+                    className="page-btn" 
+                    onClick={() => setCurrentPage(p => Math.max(p-1, 1))} 
+                    disabled={currentPage === 1}
+                  >
+                    ‹
+                  </button>
+                  <span className="page-text">Page {currentPage} of {totalPages}</span>
+                  <button 
+                    className="page-btn" 
+                    onClick={() => setCurrentPage(p => Math.min(p+1, totalPages))} 
+                    disabled={currentPage === totalPages}
+                  >
+                    ›
+                  </button>
+                  <button 
+                    className="page-btn" 
+                    onClick={() => setCurrentPage(totalPages)} 
+                    disabled={currentPage === totalPages}
+                  >
+                    ››
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<StudentBankDetails />);
+  </script>
+</body>
+</html>
