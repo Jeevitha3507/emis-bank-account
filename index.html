@@ -7,8 +7,6 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- SheetJS library for Excel file reading -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f0f5; }
@@ -96,7 +94,6 @@
       cursor: pointer; 
       font-size: 13px;
       font-weight: 500;
-      margin-top: 18px;
       transition: background-color 0.2s;
     }
     
@@ -104,7 +101,7 @@
       background-color: #059669;
     }
     
-    .upload-btn {
+    .sheets-btn {
       padding: 8px 18px; 
       background-color: #3b82f6; 
       color: white; 
@@ -113,23 +110,16 @@
       cursor: pointer; 
       font-size: 13px;
       font-weight: 500;
-      margin-top: 18px;
       transition: background-color 0.2s;
-      position: relative;
     }
     
-    .upload-btn:hover {
+    .sheets-btn:hover {
       background-color: #2563eb;
     }
     
-    .upload-btn input[type="file"] {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
+    .sheets-btn:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
     }
     
     .na-info-btn {
@@ -141,7 +131,6 @@
       font-size: 12px;
       font-weight: 500;
       white-space: nowrap;
-      margin-top: 18px;
       cursor: default;
     }
     
@@ -150,7 +139,7 @@
       min-width: 250px;
     }
     
-    .search-input { 
+    .search-input, .sheets-input { 
       width: 100%; 
       padding: 8px 12px; 
       border: 1px solid #ccc; 
@@ -159,7 +148,7 @@
       outline: none;
     }
     
-    .search-input:focus {
+    .search-input:focus, .sheets-input:focus {
       border-color: #22d3ee;
     }
     
@@ -183,7 +172,6 @@
       font-size: 13px;
       white-space: nowrap;
       user-select: none;
-      position: relative;
     }
     
     th.sortable {
@@ -201,10 +189,6 @@
       text-align: center;
       min-width: 180px;
       cursor: default;
-    }
-    
-    th.postal-header:hover {
-      background-color: #86efac;
     }
     
     .sort-indicator {
@@ -292,10 +276,6 @@
       outline: none;
     }
     
-    .per-page-dropdown:focus {
-      border-color: #22d3ee;
-    }
-    
     .page-btn { 
       padding: 6px 10px; 
       border: 1px solid #d1d5db; 
@@ -305,7 +285,6 @@
       font-size: 13px;
       color: #6b7280;
       min-width: 32px;
-      transition: background-color 0.2s;
     }
     
     .page-btn:hover:not(:disabled) {
@@ -319,69 +298,10 @@
       color: #d1d5db;
     }
     
-    .page-text {
-      font-size: 13px;
-      color: #374151;
-      padding: 0 10px;
-    }
-    
     .no-records {
       text-align: center;
       padding: 40px;
       color: #6b7280;
-    }
-    
-    .info-message {
-      background-color: #dbeafe;
-      color: #1e40af;
-      padding: 12px 16px;
-      border-radius: 6px;
-      margin: 10px 0;
-      font-size: 13px;
-      border-left: 4px solid #3b82f6;
-    }
-    
-    .showing-info {
-      font-size: 13px;
-      color: #6b7280;
-      font-weight: 500;
-    }
-    
-    @media (max-width: 768px) {
-      .filter-row {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      .filter-controls {
-        width: 100%;
-      }
-      
-      .search-group {
-        width: 100%;
-        min-width: 100%;
-      }
-      
-      .content-card {
-        margin: 0 10px 10px 10px;
-      }
-      
-      .pagination-container {
-        flex-direction: column;
-        gap: 10px;
-      }
-      
-      .pagination {
-        order: 3;
-      }
-      
-      .per-page-selector {
-        order: 1;
-      }
-      
-      .showing-info {
-        order: 2;
-      }
     }
   </style>
 </head>
@@ -402,7 +322,7 @@
       const [sortDirection, setSortDirection] = useState('asc');
       const [currentPage, setCurrentPage] = useState(1);
       const [itemsPerPage, setItemsPerPage] = useState(10);
-      const [dataSource, setDataSource] = useState('sample');
+      const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
 
       // Load sample data on initial mount
       useEffect(() => {
@@ -417,62 +337,52 @@
           { id: 4, studentName: 'Sneha Patel', studentEmisId: 'EMIS001237', class: '11', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
           { id: 5, studentName: 'Vikram Reddy', studentEmisId: 'EMIS001238', class: '12', section: 'A', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
           { id: 6, studentName: 'Anita Desai', studentEmisId: 'EMIS001239', class: '12', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
-          { id: 7, studentName: 'Rohan Gupta', studentEmisId: 'EMIS001240', class: '9', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
-          { id: 8, studentName: 'Kavya Nair', studentEmisId: 'EMIS001241', class: '9', section: 'B', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
-          { id: 9, studentName: 'Arjun Verma', studentEmisId: 'EMIS001242', class: '10', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
-          { id: 10, studentName: 'Divya Iyer', studentEmisId: 'EMIS001243', class: '10', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
-          { id: 11, studentName: 'Karan Mehta', studentEmisId: 'EMIS001244', class: '11', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
-          { id: 12, studentName: 'Neha Kapoor', studentEmisId: 'EMIS001245', class: '11', section: 'B', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
-          { id: 13, studentName: 'Sanjay Kumar', studentEmisId: 'EMIS001246', class: '12', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'No' },
-          { id: 14, studentName: 'Pooja Singh', studentEmisId: 'EMIS001247', class: '12', section: 'B', bankAccountAvailable: 'Yes', postalBankAccount: 'Yes' },
-          { id: 15, studentName: 'Ravi Sharma', studentEmisId: 'EMIS001248', class: '9', section: 'A', bankAccountAvailable: 'No', postalBankAccount: 'NA' },
+          { id: 7, studentName: 'Rohan Gupta', studentEmisId: 'EMIS001240', class: '9', section: 'A', bankAccountAvailable: 'Yes', postalBankAccount: 'No' }
         ];
         setStudents(mockData);
         setFilteredStudents(mockData);
-        setDataSource('sample');
       };
 
-      // Handle Excel file upload
-      const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+      // Google Sheets integration
+      const handleLoadGoogleSheet = async () => {
+        if (!googleSheetsUrl) {
+          alert('Please paste a Google Sheets URL first');
+          return;
+        }
 
         setLoading(true);
-        const reader = new FileReader();
+        try {
+          const sheetId = googleSheetsUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1];
+          if (!sheetId) throw new Error('Invalid Google Sheets URL');
 
-        reader.onload = (evt) => {
-          try {
-            const bstr = evt.target.result;
-            const wb = XLSX.read(bstr, { type: 'binary' });
-            const wsname = wb.SheetNames[0];
-            const ws = wb.Sheets[wsname];
-            const data = XLSX.utils.sheet_to_json(ws);
+          const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+          const response = await fetch(csvUrl);
 
-            // Transform Excel data to match our format
-            const transformedData = data.map((row, index) => ({
-              id: index + 1,
-              studentName: row['Student Name'] || row['studentName'] || '',
-              studentEmisId: row['EMIS ID'] || row['studentEmisId'] || row['Student EMIS ID'] || '',
-              class: String(row['Class'] || row['class'] || ''),
-              section: String(row['Section'] || row['section'] || ''),
-              bankAccountAvailable: row['Bank Account Available'] || row['bankAccountAvailable'] || row['Bank Account'] || 'No',
-              postalBankAccount: row['Postal Bank Account'] || row['postalBankAccount'] || row['Postal Bank'] || 'NA',
-            }));
+          if (!response.ok) throw new Error('Sheet not public. Set to "Anyone with link can view"');
 
-            setStudents(transformedData);
-            setFilteredStudents(transformedData);
-            setDataSource('excel');
-            setLoading(false);
-            alert(`Successfully loaded ${transformedData.length} records from Excel file!`);
-          } catch (error) {
-            console.error('Error reading Excel file:', error);
-            alert('Error reading Excel file. Please check the format.');
-            setLoading(false);
-          }
-        };
+          const csvText = await response.text();
+          const rows = csvText.split('\n').map(row => 
+            row.split(',').map(cell => cell.replace(/"/g, '').trim())
+          );
 
-        reader.readAsBinaryString(file);
-        e.target.value = '';
+          const studentsData = rows.slice(1).map((row, index) => ({
+            id: index + 1,
+            studentEmisId: row[1] || '',
+            studentName: row[2] || '',
+            class: row[3] || '',
+            section: row[4] || '',
+            bankAccountAvailable: row[5] || 'NA',
+            postalBankAccount: row[6] || 'NA'
+          })).filter(s => s.studentName);
+
+          setStudents(studentsData);
+          setFilteredStudents(studentsData);
+          alert(`✅ Loaded ${studentsData.length} students from Google Sheets!`);
+        } catch (error) {
+          alert(`❌ Error: ${error.message}\n\nFix:\n• Sheet must be "Anyone with link can view"\n• Headers: S.No,EMIS ID,Student Name,Class,Section,Bank Account,Postal Bank`);
+        } finally {
+          setLoading(false);
+        }
       };
 
       const classes = useMemo(() => {
@@ -507,14 +417,10 @@
         if (!sortableColumns.includes(column)) return;
         
         let direction = 'asc';
-        if (sortColumn === column && sortDirection === 'asc') {
-          direction = 'desc';
-        }
+        if (sortColumn === column && sortDirection === 'asc') direction = 'desc';
         
         const sorted = [...filteredStudents].sort((a, b) => {
-          let aValue = a[column];
-          let bValue = b[column];
-          
+          let aValue = a[column], bValue = b[column];
           if (column === 'class') {
             aValue = parseInt(aValue) || 0;
             bValue = parseInt(bValue) || 0;
@@ -522,7 +428,6 @@
             aValue = String(aValue).toLowerCase();
             bValue = String(bValue).toLowerCase();
           }
-          
           if (aValue < bValue) return direction === 'asc' ? -1 : 1;
           if (aValue > bValue) return direction === 'asc' ? 1 : -1;
           return 0;
@@ -587,24 +492,12 @@
           </div>
 
           <div className="content-card">
-            {dataSource === 'sample' && (
-              <div style={{padding: '20px 25px', borderBottom: '1px solid #e0e0e0'}}>
-                <div className="info-message">
-                  📊 Currently showing sample data. Upload your Excel file to load real student data.
-                </div>
-              </div>
-            )}
-            
             <div className="filter-section">
               <div className="filter-row">
                 <div className="filter-controls">
                   <div className="filter-group">
                     <label className="filter-label">Class</label>
-                    <select 
-                      className="filter-dropdown" 
-                      value={selectedClass} 
-                      onChange={(e) => setSelectedClass(e.target.value)}
-                    >
+                    <select className="filter-dropdown" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
                       <option value="">All Classes</option>
                       {classes.map(cls => <option key={cls} value={cls}>Class {cls}</option>)}
                     </select>
@@ -612,31 +505,37 @@
                   
                   <div className="filter-group">
                     <label className="filter-label">Section</label>
-                    <select 
-                      className="filter-dropdown" 
-                      value={selectedSection} 
-                      onChange={(e) => setSelectedSection(e.target.value)}
-                    >
+                    <select className="filter-dropdown" value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)}>
                       <option value="">All Sections</option>
                       {sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
                     </select>
                   </div>
                   
-                  <button className="upload-btn">
-                    📁 Upload Excel
-                    <input 
-                      type="file" 
-                      accept=".xlsx,.xls,.csv" 
-                      onChange={handleFileUpload}
-                    />
-                  </button>
+                  <div className="filter-group" style={{minWidth: '280px'}}>
+                    <label className="filter-label">Google Sheets URL</label>
+                    <div style={{display: 'flex', gap: '8px'}}>
+                      <input 
+                        className="sheets-input" 
+                        placeholder="https://docs.google.com/spreadsheets/d/..." 
+                        value={googleSheetsUrl} 
+                        onChange={(e) => setGoogleSheetsUrl(e.target.value)}
+                      />
+                      <button 
+                        className="sheets-btn" 
+                        onClick={handleLoadGoogleSheet}
+                        disabled={!googleSheetsUrl || loading}
+                      >
+                        {loading ? 'Loading...' : '📊 Load Data'}
+                      </button>
+                    </div>
+                  </div>
                   
                   <button className="excel-btn" onClick={handleExcelDownload}>
                     ↓ Excel Download
                   </button>
                   
                   <button className="na-info-btn">
-                    NA = Not Applicable (No bank account for this student)
+                    NA = Not Applicable
                   </button>
                 </div>
                 
@@ -676,7 +575,7 @@
                   {loading ? (
                     <tr>
                       <td colSpan="7" className="no-records">
-                        Loading...
+                        Loading Google Sheets data...
                       </td>
                     </tr>
                   ) : currentItems.length === 0 ? (
@@ -714,11 +613,7 @@
               <div className="pagination-container">
                 <div className="per-page-selector">
                   <span>Show</span>
-                  <select 
-                    className="per-page-dropdown" 
-                    value={itemsPerPage} 
-                    onChange={handleItemsPerPageChange}
-                  >
+                  <select className="per-page-dropdown" value={itemsPerPage} onChange={handleItemsPerPageChange}>
                     <option value="10">10</option>
                     <option value="30">30</option>
                     <option value="50">50</option>
@@ -732,35 +627,11 @@
                 </div>
                 
                 <div className="pagination">
-                  <button 
-                    className="page-btn" 
-                    onClick={() => setCurrentPage(1)} 
-                    disabled={currentPage === 1}
-                  >
-                    ‹‹
-                  </button>
-                  <button 
-                    className="page-btn" 
-                    onClick={() => setCurrentPage(p => Math.max(p-1, 1))} 
-                    disabled={currentPage === 1}
-                  >
-                    ‹
-                  </button>
+                  <button className="page-btn" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>‹‹</button>
+                  <button className="page-btn" onClick={() => setCurrentPage(p => Math.max(p-1, 1))} disabled={currentPage === 1}>‹</button>
                   <span className="page-text">Page {currentPage} of {totalPages}</span>
-                  <button 
-                    className="page-btn" 
-                    onClick={() => setCurrentPage(p => Math.min(p+1, totalPages))} 
-                    disabled={currentPage === totalPages}
-                  >
-                    ›
-                  </button>
-                  <button 
-                    className="page-btn" 
-                    onClick={() => setCurrentPage(totalPages)} 
-                    disabled={currentPage === totalPages}
-                  >
-                    ››
-                  </button>
+                  <button className="page-btn" onClick={() => setCurrentPage(p => Math.min(p+1, totalPages))} disabled={currentPage === totalPages}>›</button>
+                  <button className="page-btn" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>››</button>
                 </div>
               </div>
             )}
